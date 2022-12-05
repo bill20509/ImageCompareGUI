@@ -7,6 +7,7 @@ from screen import Ui_MainWindow
 from enum import Enum
 from PIL import Image
 from PIL.ExifTags import TAGS
+from compare_func import compares
 
 
 class FunctionMode(Enum):
@@ -34,6 +35,11 @@ class MainWindow_controller(QtWidgets.QMainWindow):
         self.ui.difference_button.clicked.connect(self.click_difference_button)
         self.ui.file_a_button.clicked.connect(self.click_file_a_button)
         self.ui.file_b_button.clicked.connect(self.click_file_b_button)
+        self.ui.zoom_in_button.clicked.connect(self.func_zoom_in)
+        self.ui.zoom_out_button.clicked.connect(self.func_zoom_out)
+        self.ui.diff_label.setAlignment(
+            QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter)
+
         # self.ui.zoom_in_button.clicked.connect(self.func_zoom_in)
         # self.ui.zoom_out_button.clicked.connect(self.func_zoom_out)
         # self.ui.scrollArea.setWidgetResizable(True)
@@ -84,21 +90,61 @@ class MainWindow_controller(QtWidgets.QMainWindow):
     def _slider_compute(self):
         pass
 
+    def _info_parse(self, path) -> str:
+        image = Image.open(path)
+        info = """File type: ${file_type}
+Size {image_size}
+Height: {image_height}px
+Width: {image_width}px
+Mode: {image_mode}""".format(file_type=image.format, image_size=image.size, image_height=image.height, image_width=image.width, image_mode=image.mode)
+
+        exifdata = image.getexif()
+        image.close()
+        for (tag, value) in exifdata.items():
+            key = TAGS.get(tag, tag)
+            info = info + '\n' + key + ': ' + str(value)
+            print(key + ' = ' + str(value))
+
+        print(info)
+        return info
+
     def _file_details_compute(self):
-        # image = Image.open(self.file_a_path)
-        # info_dict = {
-        #     "Image Size": image.size,
-        #     "Image Height": image.height,
-        #     "Image Width": image.width,
-        #     "Image Format": image.format,
-        #     "Image Mode": image.mode,
-        # }
-        # image.close()
-        self.ui.file_a_info.setText(self.file_a_path)
-        self.ui.file_b_info.setText(self.file_b_path)
+
+        self.ui.file_a_label.setPixmap(
+            QPixmap(self.file_a_path).scaledToHeight(300))
+        self.ui.file_b_label.setPixmap(
+            QPixmap(self.file_b_path).scaledToHeight(300))
+        self.ui.file_a_info.setText(self._info_parse(self.file_a_path))
+        self.ui.file_b_info.setText(self._info_parse(self.file_b_path))
 
     def _diff_compute(self):
-        pass
+        img = compares(0.05, self.file_a_path, self.file_b_path)
+
+        height, width, channel = img.shape
+
+        bytesPerline = channel * width
+        image_format = QImage.Format_RGB888 if channel == 3 else QImage.Format_RGBA8888
+        self.qimg = QImage(img, width, height,
+                           bytesPerline, image_format).rgbSwapped()
+        self.ui.diff_label.setPixmap(QPixmap.fromImage(self.qimg))
+
+    def func_zoom_out(self):
+        self.amplify_ratio /= 2
+        self.img_resize()
+
+    def func_zoom_in(self):
+        self.amplify_ratio *= 2
+        self.img_resize()
+
+    def img_resize(self):
+        qpixmap = QPixmap.fromImage(self.qimg)
+        scaled_pixmap = qpixmap.scaledToHeight(
+            qpixmap.height() * self.amplify_ratio)
+        print(
+            f"current img shape = ({scaled_pixmap.width()}, {scaled_pixmap.height()})")
+        self.ui.resolution_label.setText(
+            f"current img shape = ({scaled_pixmap.width()}, {scaled_pixmap.height()})")
+        self.ui.diff_label.setPixmap(scaled_pixmap)
         # def display_img(self):
         #     self.img = cv2.imread(self.img_path)
         #     height, width, channel = self.img.shape
@@ -111,10 +157,6 @@ class MainWindow_controller(QtWidgets.QMainWindow):
 
         # def func_zoom_in(self):
         #     self.amplify_ratio *= 2
-        #     self.img_resize()
-
-        # def func_zoom_out(self):
-        #     self.amplify_ratio /= 2
         #     self.img_resize()
 
         # def img_resize(self):
