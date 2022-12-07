@@ -173,6 +173,7 @@ class Ui_MainWindow(object):
         self.compare_slider.setOrientation(QtCore.Qt.Horizontal)
         self.compare_slider.setObjectName("compare_slider")
         self.compare_slider.setValue(50)
+        self.compare_slider.setRange(0, 1000)
         self.verticalLayout_8.addWidget(self.compare_slider)
 
         self.scrollArea_3 = QtWidgets.QScrollArea(self.slider_page)

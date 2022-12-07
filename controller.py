@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtGui import QImage, QPixmap, QRegExpValidator, QPainter
+from PyQt5.QtGui import QImage, QPixmap, QRegExpValidator, QPainter, QColor
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import QRegExp
 import cv2
@@ -29,7 +29,7 @@ class MainWindow_controller(QtWidgets.QMainWindow):
 
     def setup_control(self):
         self.amplify_ratio = 1
-        self.function_mode = FunctionMode.FILEDETAILS
+        self.function_mode = FunctionMode.DIFF
         self.file_a_path = ""
         self.file_b_path = ""
         self.ui.slider_button.clicked.connect(self.click_slider_button)
@@ -58,6 +58,7 @@ class MainWindow_controller(QtWidgets.QMainWindow):
             self.slider_slider_value_changed)
         self.file_a_pixmap = ''
         self.file_b_pixmap = ''
+        self.slider_result_pixmap = ''
         self.ui.slider_zoom_in_button.clicked.connect(
             self.click_slider_zoom_out)
 
@@ -65,15 +66,8 @@ class MainWindow_controller(QtWidgets.QMainWindow):
         self.ui.slide_a_label.setText('123')
 
     def slider_slider_value_changed(self):
-        # painter = QPainter(self.file_a_pixmap)
-        # painter.fillRect(self.file_a_pixmap, QtCore.Qt.transparent)
-
-        self.ui.slide_a_label.setPixmap(self.file_a_pixmap.copy(
-            0, 0, int(self.file_a_pixmap.width() * (self.ui.compare_slider.value()/100)), self.file_a_pixmap.height()))
-
-    # def ratio_slider_released(self):
-    #     pass
-        # self._compute()
+        self._compute()
+        # 0, 0, int(self.file_a_pixmap.width() * (self.ui.compare_slider.value()/100)), self.file_a_pixmap.height()))
 
     def ratio_lineEdit_value_changed(self):
         try:
@@ -105,7 +99,7 @@ class MainWindow_controller(QtWidgets.QMainWindow):
     def click_file_b_button(self):
         file_name = QFileDialog.getOpenFileName()[0]
         self.file_b_path = file_name
-        self.file_a_pixmap = QPixmap(self.file_b_path).copy()
+        self.file_b_pixmap = QPixmap(self.file_b_path).copy()
         self.ui.file_b_button.setText(os.path.basename(file_name) + '📁')
         self._compute()
 
@@ -136,13 +130,21 @@ class MainWindow_controller(QtWidgets.QMainWindow):
             self._diff_compute()
 
     def _slider_compute(self):
-        img_a = cv2.imread(self.file_a_path)
-        height, width, channel = img_a.shape
-        bytesPerline = channel * width
-        image_format = QImage.Format_RGB888 if channel == 3 else QImage.Format_RGBA8888
-        self.img_a_qimg = QImage(img_a, width, height,
-                                 bytesPerline, image_format).rgbSwapped()
-        self.ui.slide_a_label.setPixmap(QPixmap.fromImage(self.img_a_qimg))
+        pmap = self.file_a_pixmap.copy()
+        p = QPainter(pmap)
+        p.setPen(QColor(255, 0, 0))
+        w = int(self.file_a_pixmap.width() *
+                (self.ui.compare_slider.value()/1000))
+        if self.ui.compare_slider.value() == 0:
+            p.drawPixmap(0, 0, self.file_a_pixmap.copy())
+        else:
+            p.drawPixmap(0, 0, self.file_b_pixmap.copy(
+                0, 0, w, self.file_a_pixmap.height()))
+        p.drawLine(w, 0, w, pmap.height())
+        p.end()
+        # a = self.file_a_pixmap.
+        self.slider_result_pixmap = pmap
+        self.ui.slide_a_label.setPixmap(pmap)
 
     def _info_parse(self, path) -> str:
         image = Image.open(path)
