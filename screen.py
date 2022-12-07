@@ -149,6 +149,8 @@ class Ui_MainWindow(object):
         self.slider_zoom_out_button = QtWidgets.QPushButton(
             self.horizontalFrame_7)
         self.slider_zoom_out_button.setObjectName("slider_zoom_out_button")
+        self.slider_zoom_out_button.setMinimumSize(QtCore.QSize(30, 0))
+        self.slider_zoom_out_button.setMaximumSize(QtCore.QSize(30, 16777215))
         self.horizontalLayout_12.addWidget(self.slider_zoom_out_button)
         self.slider_amplify_button = QtWidgets.QLabel(self.horizontalFrame_7)
         self.slider_amplify_button.setObjectName("slider_amplify_button")
@@ -156,6 +158,8 @@ class Ui_MainWindow(object):
         self.slider_zoom_in_button = QtWidgets.QPushButton(
             self.horizontalFrame_7)
         self.slider_zoom_in_button.setObjectName("slider_zoom_in_button")
+        self.slider_zoom_in_button.setMinimumSize(QtCore.QSize(30, 0))
+        self.slider_zoom_in_button.setMaximumSize(QtCore.QSize(30, 16777215))
         self.horizontalLayout_12.addWidget(self.slider_zoom_in_button)
         self.horizontalLayout_11.addLayout(self.horizontalLayout_12)
         self.pushButton_7 = QtWidgets.QPushButton(self.horizontalFrame_7)
@@ -168,25 +172,26 @@ class Ui_MainWindow(object):
         self.compare_slider = QtWidgets.QSlider(self.slider_page)
         self.compare_slider.setOrientation(QtCore.Qt.Horizontal)
         self.compare_slider.setObjectName("compare_slider")
+        self.compare_slider.setValue(50)
         self.verticalLayout_8.addWidget(self.compare_slider)
 
         self.scrollArea_3 = QtWidgets.QScrollArea(self.slider_page)
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
-        self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(
-            QtCore.QRect(0, 0, 439, 52))
-        self.scrollAreaWidgetContents_3.setObjectName(
-            "scrollAreaWidgetContents_3")
-        self.slide_a_label = QtWidgets.QLabel(self.scrollAreaWidgetContents_3)
-        self.slide_a_label.setGeometry(QtCore.QRect(140, 50, 35, 10))
-        self.slide_a_label.setText("")
+        # self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
+        # self.scrollAreaWidgetContents_3.setGeometry(
+        #     QtCore.QRect(0, 0, 439, 52))
+        # self.scrollAreaWidgetContents_3.setObjectName(
+        #     "scrollAreaWidgetContents_3")
+        self.slide_a_label = QtWidgets.QLabel()
+        self.slide_a_label.setGeometry(QtCore.QRect(0, 0, 0, 0))
         self.slide_a_label.setObjectName("slide_a_label")
-        self.slide_b_label = QtWidgets.QLabel(self.scrollAreaWidgetContents_3)
-        self.slide_b_label.setGeometry(QtCore.QRect(140, 80, 35, 10))
-        self.slide_b_label.setText("")
-        self.slide_b_label.setObjectName("slide_b_label")
-        self.scrollArea_3.setWidget(self.scrollAreaWidgetContents_3)
+        self.slide_a_label.setAlignment(
+            QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter)
+        # self.slide_b_label = QtWidgets.QLabel(self.slider_stack)
+        # self.slide_b_label.setGeometry(QtCore.QRect(0, 0, 0, 0))
+        # self.slide_b_label.setObjectName("slide_b_label")
+        self.scrollArea_3.setWidget(self.slide_a_label)
         self.verticalLayout_8.addWidget(self.scrollArea_3)
         self.horizontalLayout_13.addLayout(self.verticalLayout_8)
         self.function_stacked_page.addWidget(self.slider_page)
@@ -333,7 +338,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.stackedWidget.setCurrentIndex(0)
-        self.function_stacked_page.setCurrentIndex(0)
+        self.function_stacked_page.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -357,7 +362,7 @@ class Ui_MainWindow(object):
         self.reset_button.setText(_translate("MainWindow", "Reset"))
         self.similarity_label.setText(_translate("MainWindow", "Similarity: "))
         self.save_button.setText(_translate("MainWindow", "Save"))
-        self.diff_label.setText(_translate("MainWindow", "diff_label"))
+        self.diff_label.setText(_translate("MainWindow", ""))
         self.file_a_info.setText(_translate("MainWindow", ""))
         self.file_b_info.setText(_translate("MainWindow", ""))
         self.label_2.setText(_translate("MainWindow", "施工中"))

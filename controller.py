@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtGui import QImage, QPixmap, QRegExpValidator
+from PyQt5.QtGui import QImage, QPixmap, QRegExpValidator, QPainter
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import QRegExp
 import cv2
@@ -10,6 +10,7 @@ from PIL import Image
 from PIL.ExifTags import TAGS
 from compare_func import compares
 import humanize
+import threading
 
 
 class FunctionMode(Enum):
@@ -46,7 +47,6 @@ class MainWindow_controller(QtWidgets.QMainWindow):
             QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter)
         self.ui.ratioSlider.valueChanged.connect(
             self.ratio_slider_value_changed)
-        self.ui.ratioSlider.sliderReleased.connect(self.ratio_slider_released)
         reg_01 = QRegExp('^1|(0\.[0-9]{1}[1-9]{1})$')
         reg01_validator = QRegExpValidator()
         reg01_validator.setRegExp(reg_01)
@@ -56,21 +56,31 @@ class MainWindow_controller(QtWidgets.QMainWindow):
             self.ratio_lineEdit_value_changed)
         self.ui.compare_slider.valueChanged.connect(
             self.slider_slider_value_changed)
-        # self.pixmap = self.ui.test_label.pixmap().copy()
+        self.file_a_pixmap = ''
+        self.file_b_pixmap = ''
+        self.ui.slider_zoom_in_button.clicked.connect(
+            self.click_slider_zoom_out)
+
+    def click_slider_zoom_out(self):
+        self.ui.slide_a_label.setText('123')
 
     def slider_slider_value_changed(self):
-        pass
-        # print(int(self.pixmap.width() * (self.ui.compare_slider.value()/100)))
-        # self.ui.test_label.setPixmap(self.pixmap.copy(
-        #     0, 0, int(self.pixmap.width() * (self.ui.compare_slider.value()/100)), self.pixmap.height()))
+        # painter = QPainter(self.file_a_pixmap)
+        # painter.fillRect(self.file_a_pixmap, QtCore.Qt.transparent)
 
-    def ratio_slider_released(self):
-        self._compute()
+        self.ui.slide_a_label.setPixmap(self.file_a_pixmap.copy(
+            0, 0, int(self.file_a_pixmap.width() * (self.ui.compare_slider.value()/100)), self.file_a_pixmap.height()))
+
+    # def ratio_slider_released(self):
+    #     pass
+        # self._compute()
 
     def ratio_lineEdit_value_changed(self):
         try:
             value = int(float(self.ui.ratio_lineEdit.text()) * 100)
             self.ui.ratioSlider.setValue(value)
+            t = threading.Thread(target=self._compute)
+            t.start()
             # self._compute()
         except:
             pass
@@ -86,13 +96,16 @@ class MainWindow_controller(QtWidgets.QMainWindow):
 
     def click_file_a_button(self):
         file_name = QFileDialog.getOpenFileName()[0]
+
         self.file_a_path = file_name
+        self.file_a_pixmap = QPixmap(self.file_a_path).copy()
         self.ui.file_a_button.setText(os.path.basename(file_name) + '📁')
         self._compute()
 
     def click_file_b_button(self):
         file_name = QFileDialog.getOpenFileName()[0]
         self.file_b_path = file_name
+        self.file_a_pixmap = QPixmap(self.file_b_path).copy()
         self.ui.file_b_button.setText(os.path.basename(file_name) + '📁')
         self._compute()
 
@@ -118,13 +131,18 @@ class MainWindow_controller(QtWidgets.QMainWindow):
         if self.function_mode == FunctionMode.SLIDER:
             self._slider_compute()
         elif self.function_mode == FunctionMode.FILEDETAILS:
-            print('good')
             self._file_details_compute()
         elif self.function_mode == FunctionMode.DIFF:
             self._diff_compute()
 
     def _slider_compute(self):
-        pass
+        img_a = cv2.imread(self.file_a_path)
+        height, width, channel = img_a.shape
+        bytesPerline = channel * width
+        image_format = QImage.Format_RGB888 if channel == 3 else QImage.Format_RGBA8888
+        self.img_a_qimg = QImage(img_a, width, height,
+                                 bytesPerline, image_format).rgbSwapped()
+        self.ui.slide_a_label.setPixmap(QPixmap.fromImage(self.img_a_qimg))
 
     def _info_parse(self, path) -> str:
         image = Image.open(path)
@@ -140,9 +158,7 @@ Mode: {image_mode}""".format(file_type=image.format, image_size=file_size, image
         for (tag, value) in exifdata.items():
             key = TAGS.get(tag, tag)
             info = info + '\n' + key + ': ' + str(value)
-            print(key + ' = ' + str(value))
 
-        print(info)
         return info
 
     def _file_details_compute(self):
@@ -157,9 +173,7 @@ Mode: {image_mode}""".format(file_type=image.format, image_size=file_size, image
     def _diff_compute(self):
         img, reuslt_metrict, similarity = compares(float(self.ui.ratio_lineEdit.text()),
                                                    self.file_a_path, self.file_b_path)
-
         height, width, channel = img.shape
-
         bytesPerline = channel * width
         image_format = QImage.Format_RGB888 if channel == 3 else QImage.Format_RGBA8888
         self.qimg = QImage(img, width, height,
@@ -194,17 +208,4 @@ Mode: {image_mode}""".format(file_type=image.format, image_size=file_size, image
         scaled_pixmap = qpixmap.scaledToHeight(
             qpixmap.height() * self.amplify_ratio)
         self.ui.amplify_ratio_label.setText(str(self.amplify_ratio*100) + '%')
-        # print(
-        #     f"current img shape = ({scaled_pixmap.width()}, {scaled_pixmap.height()})")
-        # self.ui.resolution_label.setText(
-        #     f"({scaled_pixmap.width()}, {scaled_pixmap.height()})")
         self.ui.diff_label.setPixmap(scaled_pixmap)
-        # def display_img(self):
-        #     self.img = cv2.imread(self.img_path)
-        #     height, width, channel = self.img.shape
-        #     bytesPerline = 3 * width
-        #     self.qimg = QImage(self.img, width, height,
-        #                        bytesPerline, QImage.Format_RGB888).rgbSwapped()
-        #     self.qpixmap = QPixmap.fromImage(self.qimg)
-        #     # self.qpixmap_height = self.qpixmap.height()
-        #     self.ui.picture_label.setPixmap(QPixmap.fromImage(self.qimg))
