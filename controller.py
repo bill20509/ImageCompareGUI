@@ -1,6 +1,6 @@
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtGui import QImage, QPixmap, QRegExpValidator, QPainter, QColor
-from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QFileDialog, QStyle
 from PyQt5.QtCore import QRegExp
 import os
 from screen import Ui_MainWindow
@@ -23,6 +23,8 @@ class MainWindow_controller(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()  # in python3, super(Class, self).xxx = super().xxx
         self.ui = Ui_MainWindow()
+        self.setWindowIcon(self.style().standardIcon(
+            QStyle.SP_DialogOpenButton))
         self.ui.setupUi(self)
         self.setMinimumSize(1200, 800)
         self.setup_control()
