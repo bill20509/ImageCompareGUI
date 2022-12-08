@@ -1,6 +1,4 @@
 from wand.image import Image
-import re
-import os
 import numpy
 import cv2
 
@@ -14,16 +12,4 @@ def compares(ratio, ans_file_path: str, diff_file_path: str, method='absolute'):
             img_buffer = numpy.asarray(
                 bytearray(result_image.make_blob()), dtype=numpy.uint8)
             retval = cv2.imdecode(img_buffer, cv2.IMREAD_UNCHANGED)
-            return retval, result_metric, (1 - result_metric/(result_image.height*result_image.width)) * 100
-            # if img_buffer is not None:
-            #     retval = cv2.imdecode(img_buffer, cv2.IMREAD_UNCHANGED)
-            #     return retval
-            # if result_metric == metric_threshold:
-            #     result = "PASS: {0}".format(diff_file_path)
-            #     print(result)
-            #     return "PASS", result_metric
-            # else:
-            #     result = "FAIL: {0} result_metric = {1}".format(
-            #         diff_file_path, result_metric)
-            #     print(result)
-            #     return "FAIL", result_metric
+            return result_image, retval, result_metric, (1 - result_metric/(result_image.height*result_image.width)) * 100

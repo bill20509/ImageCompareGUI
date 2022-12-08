@@ -2,7 +2,6 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtGui import QImage, QPixmap, QRegExpValidator, QPainter, QColor
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import QRegExp
-import cv2
 import os
 from screen import Ui_MainWindow
 from enum import Enum
@@ -11,6 +10,7 @@ from PIL.ExifTags import TAGS
 from compare_func import compares
 import humanize
 import threading
+from wand.image import Image as WandImage
 
 
 class FunctionMode(Enum):
@@ -56,18 +56,67 @@ class MainWindow_controller(QtWidgets.QMainWindow):
             self.ratio_lineEdit_value_changed)
         self.ui.compare_slider.valueChanged.connect(
             self.slider_slider_value_changed)
-        self.file_a_pixmap = ''
-        self.file_b_pixmap = ''
-        self.slider_result_pixmap = ''
+        self.file_a_pixmap = QPixmap()
+        self.file_b_pixmap = QPixmap()
+        self.slider_result_pixmap = QPixmap()
+        self.diff_img = WandImage()
         self.ui.slider_zoom_in_button.clicked.connect(
+            self.click_slider_zoom_in)
+        self.ui.slider_zoom_out_button.clicked.connect(
             self.click_slider_zoom_out)
+        self.ui.save_button.clicked.connect(self.click_save_button)
+        # This slider reset button anyway..
+        self.ui.pushButton_7.clicked.connect(self.slider_reset_button)
+
+    def click_save_button(self):
+        if self.file_a_path == "" or self.file_b_path == "":
+            return
+        name, extension = QFileDialog.getSaveFileName(
+            self, 'Save File', os.path.basename(self.file_a_path).split('.')[0] + '_diff', filter=self.tr("Image(*.jpg;*.png)"))
+
+        if name != '':
+            self.diff_img.save(filename=name)
 
     def click_slider_zoom_out(self):
-        self.ui.slide_a_label.setText('123')
+        try:
+            if self.file_a_path == "" or self.file_b_path == "":
+                return
+            self.amplify_ratio /= 2
+            self.slider_img_resize()
+        except Exception as e:
+            print(e)
+            pass
+
+    def click_slider_zoom_in(self):
+        try:
+            if self.file_a_path == "" or self.file_b_path == "":
+                return
+            self.amplify_ratio *= 2
+            self.slider_img_resize()
+        except Exception as e:
+            print(e)
+            pass
+
+    def slider_reset_button(self):
+        try:
+            if self.file_a_path == "" or self.file_b_path == "":
+                return
+            self.amplify_ratio = 1
+            self.slider_img_resize()
+        except Exception as e:
+            print(e)
+            pass
+
+    def slider_img_resize(self):
+        # scaled_pixmap = self.slider_result_pixmap.scaledToHeight(
+        #     self.slider_result_pixmap.height() * self.amplify_ratio)
+        self.ui.slider_amplify_button.setText(
+            str(self.amplify_ratio*100) + '%')
+        self._compute()
+        # self.ui.slide_a_label.setPixmap(scaled_pixmap)
 
     def slider_slider_value_changed(self):
         self._compute()
-        # 0, 0, int(self.file_a_pixmap.width() * (self.ui.compare_slider.value()/100)), self.file_a_pixmap.height()))
 
     def ratio_lineEdit_value_changed(self):
         try:
@@ -76,41 +125,48 @@ class MainWindow_controller(QtWidgets.QMainWindow):
             t = threading.Thread(target=self._compute)
             t.start()
             # self._compute()
-        except:
+        except Exception as e:
+            print(e)
             pass
-        # self.ui.ratioSlider.setValue(int(self.ui.ratio_lineEdit.text() * 100))
 
     def ratio_slider_value_changed(self):
         try:
             self.ui.ratio_lineEdit.setText(
                 str(self.ui.ratioSlider.value() / 100))
 
-        except:
+        except Exception as e:
+            print(e)
             pass
 
     def click_file_a_button(self):
-        file_name = QFileDialog.getOpenFileName()[0]
-
-        self.file_a_path = file_name
-        self.file_a_pixmap = QPixmap(self.file_a_path).copy()
-        self.ui.file_a_button.setText(os.path.basename(file_name) + '📁')
-        self._compute()
+        file_name = QFileDialog.getOpenFileName(
+            filter=self.tr("Image(*.jpg;*.png)"))[0]
+        if file_name != '':
+            self.file_a_path = file_name
+            self.file_a_pixmap = QPixmap(self.file_a_path).copy()
+            self.ui.file_a_button.setText(os.path.basename(file_name) + '📁')
+            self._compute()
 
     def click_file_b_button(self):
-        file_name = QFileDialog.getOpenFileName()[0]
-        self.file_b_path = file_name
-        self.file_b_pixmap = QPixmap(self.file_b_path).copy()
-        self.ui.file_b_button.setText(os.path.basename(file_name) + '📁')
-        self._compute()
+        file_name = QFileDialog.getOpenFileName(
+            filter=self.tr("Image(*.jpg;*.png)"))[0]
+        if file_name != '':
+            self.file_b_path = file_name
+            self.file_b_pixmap = QPixmap(self.file_b_path).copy()
+            self.ui.file_b_button.setText(os.path.basename(file_name) + '📁')
+            self._compute()
 
     def click_slider_button(self):
         self.function_mode = FunctionMode.SLIDER
         self.ui.function_stacked_page.setCurrentWidget(self.ui.slider_page)
+        self.ui.slider_amplify_button.setText(
+            str(self.amplify_ratio*100) + '%')
         self._compute()
 
     def click_difference_button(self):
         self.function_mode = FunctionMode.DIFF
         self.ui.function_stacked_page.setCurrentWidget(self.ui.difference_page)
+        self.ui.amplify_ratio_label.setText(str(self.amplify_ratio*100) + '%')
         self._compute()
 
     def click_file_details_button(self):
@@ -130,15 +186,17 @@ class MainWindow_controller(QtWidgets.QMainWindow):
             self._diff_compute()
 
     def _slider_compute(self):
-        pmap = self.file_a_pixmap.copy()
+        pmap = self.file_a_pixmap.scaledToHeight(
+            int(self.file_a_pixmap.height() * self.amplify_ratio)).copy()
         p = QPainter(pmap)
         p.setPen(QColor(255, 0, 0))
-        w = int(self.file_a_pixmap.width() *
+        w = int(pmap.width() *
                 (self.ui.compare_slider.value()/1000))
         if self.ui.compare_slider.value() == 0:
-            p.drawPixmap(0, 0, self.file_a_pixmap.copy())
+            p.drawPixmap(0, 0, pmap.copy())
         else:
-            p.drawPixmap(0, 0, self.file_b_pixmap.copy(
+            p.drawPixmap(0, 0, self.file_b_pixmap.scaledToHeight(
+                int(self.file_b_pixmap.height() * self.amplify_ratio)).copy(
                 0, 0, w, self.file_a_pixmap.height()))
         p.drawLine(w, 0, w, pmap.height())
         p.end()
@@ -173,36 +231,51 @@ Mode: {image_mode}""".format(file_type=image.format, image_size=file_size, image
         self.ui.file_b_info.setText(self._info_parse(self.file_b_path))
 
     def _diff_compute(self):
-        img, reuslt_metrict, similarity = compares(float(self.ui.ratio_lineEdit.text()),
-                                                   self.file_a_path, self.file_b_path)
+        wand_img, img, reuslt_metrict, similarity = compares(float(self.ui.ratio_lineEdit.text()),
+                                                             self.file_a_path, self.file_b_path)
         height, width, channel = img.shape
         bytesPerline = channel * width
         image_format = QImage.Format_RGB888 if channel == 3 else QImage.Format_RGBA8888
         self.qimg = QImage(img, width, height,
                            bytesPerline, image_format).rgbSwapped()
-        self.ui.diff_label.setPixmap(QPixmap.fromImage(self.qimg))
+
+        new_pixmap = QPixmap.fromImage(self.qimg).scaledToHeight(
+            int(height * self.amplify_ratio))
+        self.ui.diff_label.setPixmap(new_pixmap)
+        # self.ui.diff_label.setPixmap(QPixmap.fromImage(self.qimg).scaledToHeight(
+        #     int(height * self.amplify_ratio)))
         self.ui.similarity_label.setText(
             'Similarity: ' + str(round(similarity, 2)) + "%")
+        self.diff_img = wand_img
 
     def func_zoom_out(self):
         try:
+            if self.file_a_path == "" or self.file_b_path == "":
+                return
             self.amplify_ratio /= 2
             self.img_resize()
-        except:
+        except Exception as e:
+            print(e)
             pass
 
     def func_zoom_in(self):
         try:
+            if self.file_a_path == "" or self.file_b_path == "":
+                return
             self.amplify_ratio *= 2
             self.img_resize()
-        except:
+        except Exception as e:
+            print(e)
             pass
 
     def reset_button(self):
         try:
+            if self.file_a_path == "" or self.file_b_path == "":
+                return
             self.amplify_ratio = 1
             self.img_resize()
-        except:
+        except Exception as e:
+            print(e)
             pass
 
     def img_resize(self):
