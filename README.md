@@ -17,8 +17,6 @@ Features:
 ⭐Compare 2 image with a slider bar  
 ⭐Compare 2 image file details
 
-基本上是隨便寫的 Code很醜
-
 ![red](1.PNG)
 ![slider](2.PNG)
 ![details](3.PNG)
